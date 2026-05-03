@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "component-metadata.schema.json",
+  "title": "AI Component Metadata",
+  "description": "Schema for AI-consumable design system component metadata. Enables intelligent UI generation and component selection.",
+  "type": "object",
+  "required": ["component", "usage", "aiHints"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to this JSON Schema for IDE validation and autocomplete."
+    },
+    "component": {
+      "type": "object",
+      "description": "Core identity of the component.",
+      "required": ["name", "category", "description", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "PascalCase component name (e.g. 'Button', 'Card')."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["atoms", "molecules", "organisms"],
+          "description": "Atomic Design category."
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief, one-sentence description of the component's purpose."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["interactive", "display", "container", "input", "navigation"],
+          "description": "Functional type of the component."
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative path to the component source file from project root."
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "description": "How and when to use this component.",
+      "required": ["useCases"],
+      "additionalProperties": false,
+      "properties": {
+        "useCases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of scenarios where this component is the right choice."
+        },
+        "requiredProps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Props that must always be provided."
+        },
+        "optionalProps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Commonly used optional props."
+        },
+        "commonPatterns": {
+          "type": "array",
+          "description": "Recommended composition patterns with example code.",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "composition"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Pattern name (e.g. 'Primary Action')."
+              },
+              "description": {
+                "type": "string",
+                "description": "When to use this pattern."
+              },
+              "composition": {
+                "type": "string",
+                "description": "JSX/TSX code example."
+              }
+            }
+          }
+        },
+        "antiPatterns": {
+          "type": "array",
+          "description": "Known misuses to avoid.",
+          "items": {
+            "type": "object",
+            "required": ["scenario", "reason", "alternative"],
+            "additionalProperties": false,
+            "properties": {
+              "scenario": {
+                "type": "string",
+                "description": "What NOT to do."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Why it's wrong."
+              },
+              "alternative": {
+                "type": "string",
+                "description": "What to do instead."
+              }
+            }
+          }
+        }
+      }
+    },
+    "composition": {
+      "type": "object",
+      "description": "How this component relates to other components.",
+      "additionalProperties": false,
+      "properties": {
+        "slots": {
+          "type": "object",
+          "description": "Named content areas. Keys are slot names, values describe what goes there.",
+          "additionalProperties": { "type": "string" }
+        },
+        "nestedComponents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Sub-components that compose this component (e.g. CardHeader, CardContent)."
+        },
+        "commonPartners": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Components frequently used alongside this one."
+        },
+        "parentConstraints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Requirements for the parent container."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "npm packages this component depends on."
+        }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "description": "Interactive behavior and state management.",
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Visual/interactive states (e.g. hover, focus, disabled)."
+        },
+        "interactions": {
+          "type": "object",
+          "description": "Event handlers and their behavior.",
+          "additionalProperties": { "type": "string" }
+        },
+        "responsive": {
+          "type": "object",
+          "description": "Responsive behavior and size options.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "description": "Accessibility requirements and support.",
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "ARIA role (e.g. 'button', 'region')."
+        },
+        "keyboardSupport": {
+          "type": "string",
+          "description": "How the component responds to keyboard input."
+        },
+        "screenReader": {
+          "type": "string",
+          "description": "How screen readers announce this component."
+        },
+        "focusManagement": {
+          "type": "string",
+          "description": "Focus strategy (e.g. trap, roving, standard)."
+        },
+        "wcag": {
+          "type": "string",
+          "description": "WCAG compliance level (e.g. 'AA', 'AAA')."
+        }
+      }
+    },
+    "variants": {
+      "type": "object",
+      "description": "Available variants. Keys are variant dimensions (e.g. 'variant', 'size'), values map option names to their styling or description.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "aiHints": {
+      "type": "object",
+      "description": "Hints to help AI select and use this component correctly.",
+      "required": ["priority", "keywords", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "priority": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "How often this component should be considered. High = commonly used."
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Trigger words that suggest this component (used for intent matching)."
+        },
+        "context": {
+          "type": "string",
+          "description": "Natural language guidance for when to use this component."
+        }
+      }
+    }
+  }
+}
