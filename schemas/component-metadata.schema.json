@@ -159,7 +159,7 @@
         },
         "responsive": {
           "type": "object",
-          "description": "Responsive behavior and size options.",
+          "description": "Context-dependent responsive strategies that cannot be encoded in the component itself. Only use this when there are multiple valid approaches on narrow viewports and the right choice depends on how the component is being used (e.g. a table that could collapse to cards or hide columns depending on the data). Do not use for universal rules that always apply — those belong in the component's CSS.",
           "additionalProperties": true
         }
       }
