@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "pattern-metadata.schema.json",
+  "title": "Pattern Metadata",
+  "description": "Schema for template/flow-level governance rules. Encodes composition constraints that span multiple components within a defined UI pattern — constraints that cannot be expressed in any single component's metadata.",
+  "type": "object",
+  "required": ["pattern", "steps", "aiHints"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to this JSON Schema for IDE validation and autocomplete."
+    },
+    "pattern": {
+      "type": "object",
+      "description": "Identity of this pattern.",
+      "required": ["name", "id", "category", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable pattern name (e.g. 'Checkout Flow')."
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique kebab-case identifier for this pattern (e.g. 'checkout-flow')."
+        },
+        "category": {
+          "type": "string",
+          "description": "Domain this pattern belongs to (e.g. 'e-commerce', 'onboarding', 'settings')."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this pattern represents and why it needs flow-level governance."
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "description": "Ordered steps that make up this flow. Each step carries its own composition constraints.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "composition"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Unique kebab-case identifier for this step (e.g. 'order-confirmation')."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable step name."
+          },
+          "description": {
+            "type": "string",
+            "description": "What happens in this step and what the user is trying to accomplish."
+          },
+          "composition": {
+            "type": "object",
+            "description": "Composition rules for this step — constraints that apply to the full set of rendered components, not any individual component in isolation.",
+            "required": [],
+            "additionalProperties": false,
+            "properties": {
+              "maxPrimaryCTA": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Maximum number of primary CTAs permitted to be visible simultaneously in this step."
+              },
+              "notes": {
+                "type": "string",
+                "description": "Narrative guidance for this step's composition rules."
+              },
+              "required": {
+                "type": "array",
+                "description": "Components that must be present in this step's composition.",
+                "items": { "$ref": "#/definitions/compositionEntry" }
+              },
+              "forbidden": {
+                "type": "array",
+                "description": "Component configurations that must not appear in this step.",
+                "items": { "$ref": "#/definitions/compositionEntry" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "aiHints": {
+      "type": "object",
+      "description": "Hints for AI agents consuming this pattern. Indicates scope and how to apply the rules.",
+      "required": ["scope", "enforcementLevel", "keywords"],
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": ["template", "page", "section"],
+          "description": "The level at which rules in this file must be validated. 'template' = the full multi-step flow; 'page' = a single page; 'section' = a region within a page."
+        },
+        "enforcementLevel": {
+          "type": "string",
+          "enum": ["strict", "advisory"],
+          "description": "'strict' = violations must be flagged as errors; 'advisory' = violations should surface as warnings."
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Terms that trigger this pattern during intent matching."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Natural language guidance for AI agents on how to apply these rules holistically."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "compositionEntry": {
+      "type": "object",
+      "description": "A component constraint entry — describes which component, in what configuration, and at what quantity.",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "type": "string",
+          "description": "PascalCase component name this constraint applies to (e.g. 'Button', 'Modal')."
+        },
+        "variant": {
+          "type": "string",
+          "description": "The specific variant this constraint targets. Omit to apply to all variants."
+        },
+        "quantity": {
+          "type": "string",
+          "enum": ["exactly-one", "at-most-one", "at-least-one", "more-than-one"],
+          "description": "How many instances of this component (with the given variant) are permitted or required across the full step composition."
+        },
+        "label-hint": {
+          "type": "string",
+          "description": "Suggested label text for this component instance. Informational only — not enforced."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why this entry is required or forbidden. Always include for forbidden entries."
+        }
+      }
+    }
+  }
+}
