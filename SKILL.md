@@ -36,6 +36,10 @@ component:
   description: Brief description
   type: interactive
   path: packages/design-system/src/components/component-name/component-name.jsx
+  figma:                        # optional — omit if no Figma source is known
+    fileKey: ""                 # from the Figma file URL: figma.com/design/FILE_KEY/...
+    nodeId: ""                  # from ?node-id= in the URL when the component is selected
+    componentKey: ""            # stable REST API key — use this for durable references
 usage:
   useCases:
     - primary-use
@@ -75,7 +79,17 @@ Identify:
 - Props and their types
 - Accessibility attributes
 
-### 2. Generate Metadata
+### 2. Resolve Figma references (if available)
+
+If a Figma file or component URL is provided, extract and populate the `component.figma` block:
+
+- **`fileKey`** — the path segment after `/design/` in the file URL: `figma.com/design/FILE_KEY/...`
+- **`nodeId`** — the `?node-id=` value when the component is selected in Figma. The URL uses hyphens (`1-234`); convert to colons (`1:234`) for the REST API. Store whichever format the project uses consistently.
+- **`componentKey`** — stable across renames and file moves. Retrieve from the Figma REST API (`GET /v1/files/:key/components`) or from a connected Figma MCP tool if available.
+
+If no Figma source is known, omit the `figma` block entirely — do not include it with empty strings.
+
+### 3. Generate Metadata
 Create a `.metadata.yaml` file. The `yaml-language-server` comment on line 1 enables:
 - **Autocomplete** — Press Ctrl+Space in your IDE for property suggestions
 - **Validation** — Red squiggles for invalid values
@@ -83,7 +97,7 @@ Create a `.metadata.yaml` file. The `yaml-language-server` comment on line 1 ena
 
 Requires the **Red Hat YAML** VS Code extension (`redhat.vscode-yaml`).
 
-### 3. Multi-line JSX patterns
+### 4. Multi-line JSX patterns
 Use YAML block scalars for readable composition examples:
 
 ```yaml
@@ -101,7 +115,7 @@ commonPatterns:
       />
 ```
 
-### 4. Validate Metadata
+### 5. Validate Metadata
 - IDE validates automatically via the `yaml-language-server` comment
 - Schema is also mapped in `.vscode/settings.json` as a fallback
 - CLI validation (requires `js-yaml` + `ajv`):

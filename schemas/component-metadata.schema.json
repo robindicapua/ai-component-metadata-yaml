@@ -38,6 +38,25 @@
         "path": {
           "type": "string",
           "description": "Relative path to the component source file from project root."
+        },
+        "figma": {
+          "type": "object",
+          "description": "Links to the exact Figma component. Enables AI agents and Code Connect tools to resolve the component in Figma without guessing.",
+          "additionalProperties": false,
+          "properties": {
+            "fileKey": {
+              "type": "string",
+              "description": "Figma file key — the segment after /design/ in the file URL: figma.com/design/FILE_KEY/..."
+            },
+            "nodeId": {
+              "type": "string",
+              "description": "Figma node ID of the component frame or set, as it appears in the URL (?node-id=1-234). Use colon format (1:234) for the REST API."
+            },
+            "componentKey": {
+              "type": "string",
+              "description": "Stable Figma component key from the REST API. Does not change on rename or file move — use this for durable references."
+            }
+          }
         }
       }
     },
