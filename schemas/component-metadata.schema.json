@@ -23,8 +23,8 @@
         },
         "category": {
           "type": "string",
-          "enum": ["atoms", "molecules", "organisms"],
-          "description": "Atomic Design category."
+          "enum": ["atoms", "molecules", "organisms", "typography"],
+          "description": "Atomic Design category (or 'typography' for text primitives)."
         },
         "description": {
           "type": "string",
@@ -32,7 +32,7 @@
         },
         "type": {
           "type": "string",
-          "enum": ["interactive", "display", "container", "input", "navigation"],
+          "enum": ["interactive", "display", "container", "input", "navigation", "presentation"],
           "description": "Functional type of the component."
         },
         "path": {
@@ -106,12 +106,13 @@
         },
         "antiPatterns": {
           "type": "array",
-          "description": "Known misuses to avoid.",
+          "description": "Known misuses to avoid. Each is a citable component-tier law.",
           "items": {
             "type": "object",
-            "required": ["scenario", "reason", "alternative"],
+            "required": ["id", "scenario", "reason", "alternative"],
             "additionalProperties": false,
             "properties": {
+              "id": { "$ref": "#/definitions/lawId" },
               "scenario": {
                 "type": "string",
                 "description": "What NOT to do."
@@ -123,7 +124,8 @@
               "alternative": {
                 "type": "string",
                 "description": "What to do instead."
-              }
+              },
+              "severity": { "$ref": "#/definitions/severity" }
             }
           }
         }
@@ -151,8 +153,49 @@
         },
         "parentConstraints": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Requirements for the parent container."
+          "description": "Context-specific composition laws — a component+variant restricted within a named parent context. Each is a citable component-tier law.",
+          "items": {
+            "type": "object",
+            "required": ["id", "context"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/definitions/lawId" },
+              "context": {
+                "type": "string",
+                "description": "The parent context this constraint applies in (e.g. 'form-email-collection')."
+              },
+              "description": {
+                "type": "string",
+                "description": "What this context is."
+              },
+              "severity": { "$ref": "#/definitions/severity" },
+              "forbidden": {
+                "type": "array",
+                "description": "Variants that must not be used in this context.",
+                "items": {
+                  "type": "object",
+                  "required": ["variant"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "variant": { "type": "string" },
+                    "reason": { "type": "string" }
+                  }
+                }
+              },
+              "recommended": {
+                "type": "array",
+                "description": "Variants to prefer instead.",
+                "items": {
+                  "type": "object",
+                  "required": ["variant"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "variant": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
         },
         "dependencies": {
           "type": "array",
@@ -212,10 +255,12 @@
     },
     "variants": {
       "type": "object",
-      "description": "Available variants. Keys are variant dimensions (e.g. 'variant', 'size'), values map option names to their styling or description.",
+      "description": "Available variants. Keys are variant dimensions (e.g. 'variant', 'size'); each value is either a list of option names or a map of option names to their styling/description.",
       "additionalProperties": {
-        "type": "object",
-        "additionalProperties": true
+        "oneOf": [
+          { "type": "array", "items": { "type": ["string", "number"] } },
+          { "type": "object", "additionalProperties": true }
+        ]
       }
     },
     "aiHints": {
@@ -239,6 +284,18 @@
           "description": "Natural language guidance for when to use this component."
         }
       }
+    }
+  },
+  "definitions": {
+    "lawId": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,6}-[0-9]+$",
+      "description": "Authored, stable component-tier law citation, prefixed with the component's scope code (e.g. 'BTN-2'). Never reused once retired."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["error", "warning", "info"],
+      "description": "How hard the law pushes back. Defaults: parentConstraints → warning, antiPatterns → info. Set to override."
     }
   }
 }
