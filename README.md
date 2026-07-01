@@ -17,7 +17,7 @@ When you ask Claude to generate or update component metadata, this skill instruc
 - **Accessibility requirements** (ARIA role, keyboard support, WCAG level)
 - **Available variants** and what each one is for
 
-A second schema — `pattern-metadata.schema.json` — covers multi-step UI flows and composition constraints that span multiple components (e.g. "a checkout flow may only have one primary CTA visible at a time").
+For multi-step UI flows and composition constraints that span multiple components (e.g. "a checkout flow may only have one primary CTA visible at a time"), see the sibling [ai-pattern-metadata-yaml](https://github.com/robindicapua/ai-pattern-metadata-yaml) skill instead — that content model is laws-first, not hints-first, and doesn't fit this schema.
 
 ---
 
@@ -151,7 +151,7 @@ aiHints:
 
 ## Schemas
 
-Two schemas ship with this skill.
+One schema ships with this skill.
 
 ### `component-metadata.schema.json`
 
@@ -188,18 +188,6 @@ component:
     nodeId: "1:234"
     componentKey: "a1b2c3d4e5f6a1b2c3d4e5f6"
 ```
-
-### `pattern-metadata.schema.json`
-
-For multi-step UI flows and cross-component composition rules. Required sections: `pattern`, `steps`, `aiHints`.
-
-Use this when a constraint cannot be expressed in any single component's metadata — for example: "the confirmation step of a checkout flow must have exactly one primary CTA and must not show a secondary destructive action."
-
-| Section | Required | Purpose |
-|---|---|---|
-| `pattern` | Yes | Name, kebab-case ID, domain category, description |
-| `steps` | Yes | Ordered steps, each with composition constraints (required/forbidden components, max CTAs) |
-| `aiHints` | Yes | Scope (template/page/section), enforcement level (strict/advisory), keywords |
 
 ---
 
