@@ -125,7 +125,12 @@
                 "type": "string",
                 "description": "What to do instead."
               },
-              "severity": { "$ref": "#/definitions/severity" }
+              "severity": { "$ref": "#/definitions/severity" },
+              "status": {
+                "type": "string",
+                "enum": ["repealed"],
+                "description": "Mark a law repealed: it stays in the authored YAML (its citation is retired, never reused) but is dropped from the generated governance index."
+              }
             }
           }
         }
@@ -193,6 +198,11 @@
                     "variant": { "type": "string" }
                   }
                 }
+              },
+              "status": {
+                "type": "string",
+                "enum": ["repealed"],
+                "description": "Mark a law repealed: it stays in the authored YAML (its citation is retired, never reused) but is dropped from the generated governance index."
               }
             }
           }
