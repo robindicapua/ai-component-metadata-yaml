@@ -1,23 +1,28 @@
-# AI Component Metadata (YAML) — Claude Code Skill
+# AI Component Spec + Governance (YAML) — Claude Code Skill
 
-A [Claude Code](https://claude.ai/code) skill that generates structured, AI-readable metadata for design system components. Metadata is written as `.metadata.yaml` files, co-located with component source code, and validated against a JSON Schema.
+A [Claude Code](https://claude.ai/code) skill that generates structured, AI-readable context for design system components as **two co-located YAML files**, validated against JSON Schemas:
 
-**Based on** [ai-component-metadata](https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata) by Cristian Morales. Converted to YAML for ~25% token reduction on deeply nested component data.
+- `<component>.spec.yaml` — **descriptive**: what the component *is* (API, variants, accessibility, usage examples, AI hints)
+- `<component>.governance.yaml` — **normative**: citable rules about what you *must or must not do* (anti-patterns, parent constraints); only present when the component has rules
+
+The split follows one test: **a spec describes, governance prescribes.**
+
+**Based on** [ai-component-metadata](https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata) by Cristian Morales. Converted to YAML for ~25% token reduction on deeply nested component data; v2 split spec from governance.
 
 ---
 
 ## What it does
 
-When you ask Claude to generate or update component metadata, this skill instructs it to produce a `.metadata.yaml` file for each component. That file tells AI agents:
+When you ask Claude to generate or update component context, this skill instructs it to produce a `.spec.yaml` (and, when rules exist, a `.governance.yaml`) for each component. Together they tell AI agents:
 
 - **When** to reach for this component (use cases, keywords, priority)
 - **How** to use it correctly (required/optional props, composition patterns)
-- **What to avoid** (anti-patterns with reasons and alternatives)
+- **What to avoid** (governance rules with stable citations, reasons, and alternatives)
 - **How it behaves** (states, interactions, responsive rules)
 - **Accessibility requirements** (ARIA role, keyboard support, WCAG level)
 - **Available variants** and what each one is for
 
-For multi-step UI flows and composition constraints that span multiple components (e.g. "a checkout flow may only have one primary CTA visible at a time"), see the sibling [ai-pattern-metadata-yaml](https://github.com/robindicapua/ai-pattern-metadata-yaml) skill instead — that content model is laws-first, not hints-first, and doesn't fit this schema.
+For multi-step UI flows and composition constraints that span multiple components (e.g. "a checkout flow may only have one primary CTA visible at a time"), see the sibling [ai-pattern-metadata-yaml](https://github.com/robindicapua/ai-pattern-metadata-yaml) skill instead — that content model is rules-first across whole compositions, and doesn't fit this schema.
 
 ---
 
@@ -73,11 +78,11 @@ Add the schema mapping to `.vscode/settings.json` so the `yaml-language-server` 
 ```json
 {
   "yaml.schemas": {
-    ".agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json": [
-      "**/*.metadata.yaml"
+    ".agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json": [
+      "packages/ui/src/components/**/*.spec.yaml"
     ],
-    ".agent/skills/ai-component-metadata-yaml/schemas/pattern-metadata.schema.json": [
-      "**/*.pattern.yaml"
+    ".agent/skills/ai-component-metadata-yaml/schemas/component-governance.schema.json": [
+      "packages/ui/src/components/**/*.governance.yaml"
     ]
   }
 }
@@ -87,24 +92,24 @@ Add the schema mapping to `.vscode/settings.json` so the `yaml-language-server` 
 
 ## Usage
 
-Ask Claude to generate metadata for a component:
+Ask Claude to generate a spec for a component:
 
 ```
-Generate metadata for the Button component.
+Generate the spec for the Button component.
 ```
 
 Or for a whole batch:
 
 ```
-Generate metadata files for all components in packages/ui/src/components/.
+Generate spec files for all components in packages/ui/src/components/.
 ```
 
-Claude will co-locate a `.metadata.yaml` file next to each component source file and validate it against the schema.
+Claude will co-locate a `.spec.yaml` file next to each component source file (plus a `.governance.yaml` when the component has rules) and validate them against the schemas.
 
 ### Example output
 
 ```yaml
-# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json
+# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
 component:
   name: Button
   category: atoms
@@ -126,10 +131,6 @@ usage:
         <Button variant="filled" size="md">
           Get started
         </Button>
-  antiPatterns:
-    - scenario: Using Button for a link that navigates away from the app
-      reason: Misleads screen readers and breaks keyboard navigation expectations.
-      alternative: Use an anchor tag or a Link component with button styling.
 
 accessibility:
   role: button
@@ -151,22 +152,33 @@ aiHints:
 
 ## Schemas
 
-One schema ships with this skill.
+Two schemas ship with this skill.
 
-### `component-metadata.schema.json`
+### `component-spec.schema.json`
 
-For individual components. Required sections: `component`, `usage`, `aiHints`.
+The descriptive spec. Required sections: `component`, `usage`, `aiHints`.
 
 | Section | Required | Purpose |
 |---|---|---|
 | `component` | Yes | Name, category (atoms/molecules/organisms), functional type, source path |
 | `component.figma` | No | Figma `fileKey`, `nodeId`, and `componentKey` — lets AI agents and Code Connect tools resolve the exact component in Figma |
-| `usage` | Yes | Use cases, props, composition patterns, anti-patterns |
+| `usage` | Yes | Use cases, props, composition patterns |
 | `aiHints` | Yes | Priority (high/medium/low), intent-matching keywords, natural language context |
-| `composition` | No | Slots, nested sub-components, common partners, parent constraints, npm dependencies |
+| `composition` | No | Slots, nested sub-components, common partners, npm dependencies |
 | `behavior` | No | States, event interactions, responsive rules |
 | `accessibility` | No | ARIA role, keyboard support, screen reader, focus management, WCAG level |
 | `variants` | No | Variant dimensions and their options |
+
+### `component-governance.schema.json`
+
+The normative rules. Required sections: `component` (name + scope code), `rules`.
+
+| Rule kind | Fields | Purpose |
+|---|---|---|
+| `anti-pattern` | `scenario`, `reason`, `alternative` | A usage to avoid, with a stable citation id |
+| `parent-constraint` | `context`, `forbidden`, `recommended` | Variants restricted within a named parent context |
+
+Every rule has an authored, stable `id` prefixed with the component's scope code (e.g. `BTN-2`), an optional `severity` (`error`/`warning`/`info`), and an optional `status: repealed` to retire it without reusing the citation.
 
 **Functional types:** `interactive`, `display`, `container`, `input`, `navigation`
 
@@ -203,14 +215,16 @@ The skill's `SKILL.md` contains a "Folder Structure" section that shows where me
 ```
 packages/ui/src/components/[component-name]/
 ├── [component-name].tsx
-└── [component-name].metadata.yaml
+├── [component-name].spec.yaml
+└── [component-name].governance.yaml   (only if the component has rules)
 ```
 
 **Alternative: flat components folder**
 ```
 src/components/
 ├── Button.tsx
-└── Button.metadata.yaml
+├── Button.spec.yaml
+└── Button.governance.yaml
 ```
 
 **Alternative: monorepo with multiple packages**
@@ -218,30 +232,31 @@ src/components/
 packages/[package-name]/src/[component-name]/
 ├── index.ts
 ├── [component-name].tsx
-└── [component-name].metadata.yaml
+├── [component-name].spec.yaml
+└── [component-name].governance.yaml
 ```
 
-Edit `SKILL.md` → "Folder Structure (Required)" section to reflect your actual layout, and update the `component.path` description in `component-metadata.schema.json` if needed.
+Edit `SKILL.md` → "Folder Structure (Required)" section to reflect your actual layout, and update the `component.path` description in `component-spec.schema.json` if needed.
 
 ### Update the schema reference path
 
-Every `.metadata.yaml` file starts with a `yaml-language-server` comment that points to the schema. The path is relative to the metadata file's location. If the skill lives somewhere other than `.agent/skills/ai-component-metadata-yaml/`, count the directory levels and adjust accordingly.
+Every `.spec.yaml` / `.governance.yaml` file starts with a `yaml-language-server` comment that points to its schema. The path is relative to the file's location. If the skill lives somewhere other than `.agent/skills/ai-component-metadata-yaml/`, count the directory levels and adjust accordingly.
 
 **Skill at `.agent/skills/ai-component-metadata-yaml/` — component 4 levels deep:**
 ```yaml
-# yaml-language-server: $schema=../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json
+# yaml-language-server: $schema=../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
 ```
 
 **Skill at `tools/skills/metadata/` — component 2 levels deep:**
 ```yaml
-# yaml-language-server: $schema=../../tools/skills/metadata/schemas/component-metadata.schema.json
+# yaml-language-server: $schema=../../tools/skills/metadata/schemas/component-spec.schema.json
 ```
 
-Update the Quick Start template in `SKILL.md` so Claude generates the correct path automatically.
+Update the Quick Start templates in `SKILL.md` so Claude generates the correct paths automatically.
 
 ### Adapt the component categories
 
-The schema enforces `atoms`, `molecules`, `organisms` (Atomic Design). If your design system uses a different taxonomy — for example `primitives`, `patterns`, `layouts` — edit the `enum` in `component-metadata.schema.json`:
+The schema enforces `atoms`, `molecules`, `organisms` (Atomic Design). If your design system uses a different taxonomy — for example `primitives`, `patterns`, `layouts` — edit the `enum` in `component-spec.schema.json`:
 
 ```json
 "category": {
@@ -253,37 +268,20 @@ The schema enforces `atoms`, `molecules`, `organisms` (Atomic Design). If your d
 
 Then update `SKILL.md` → "Component Categories" section to match.
 
-### Change enforcement level for anti-patterns
+### Tune how hard rules push back
 
-The `usage.antiPatterns` field is advisory by default — it informs AI but does not block generation. If you run automated governance checks in CI, you can add an `enforcement` field to the anti-pattern schema:
-
-```json
-"antiPatterns": {
-  "items": {
-    "properties": {
-      "scenario": { "type": "string" },
-      "reason": { "type": "string" },
-      "alternative": { "type": "string" },
-      "enforcement": {
-        "type": "string",
-        "enum": ["strict", "advisory"],
-        "description": "Whether CI should block on this violation."
-      }
-    }
-  }
-}
-```
+Every governance rule carries an optional `severity` (`error` | `warning` | `info`); defaults are `info` for `anti-pattern` and `warning` for `parent-constraint`. If you run automated governance checks in CI, treat `error` as blocking and the rest as advisory — no schema change needed.
 
 ---
 
 ## CLI validation
 
-Validate a metadata file without an IDE:
+Validate a file without an IDE:
 
 ```bash
 # Requires js-yaml and ajv to be installed
-npx js-yaml path/to/button.metadata.yaml | npx ajv validate \
-  -s .agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json \
+npx js-yaml path/to/button.spec.yaml | npx ajv validate \
+  -s .agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json \
   -d /dev/stdin
 ```
 
