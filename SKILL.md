@@ -1,19 +1,24 @@
 ---
 name: ai-component-metadata-yaml
-version: 1.0.0
+version: 2.0.0
 author: Robin Di Capua
 based_on: "ai-component-metadata-json by Robin Di Capua, itself adapted from ai-component-metadata by Cristian Morales — https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata"
-changes: "Converted from JSON metadata format to YAML for ~25% token reduction on deeply nested component data. Schema validation preserved via yaml-language-server comment."
+changes: "v2.0.0: split the single .metadata.yaml into two files — a descriptive .spec.yaml (API, variants, a11y, examples) and a normative .governance.yaml (citable rules: anti-patterns, parent constraints). Previously: converted from JSON to YAML for ~25% token reduction."
 license: MIT
-description: Generate AI-ready metadata for design system components as YAML files with JSON Schema validation. Produces structured, tool-agnostic metadata that helps AI understand when and how to use components correctly. Lower token cost than JSON equivalents, human-readable, and IDE-validated via the yaml-language-server comment.
+description: Generate AI-ready component context as two YAML files with JSON Schema validation — a descriptive spec (<component>.spec.yaml) and, when the component has citable rules, a governance file (<component>.governance.yaml). A spec describes, governance prescribes. Lower token cost than JSON equivalents, human-readable, and IDE-validated via the yaml-language-server comment.
 ---
 
-**Version:** 1.0.0  
-**Last Updated:** 2026-05-03
+**Version:** 2.0.0  
+**Last Updated:** 2026-07-15
 
-# AI Component Metadata Generator (YAML)
+# AI Component Spec + Governance Generator (YAML)
 
-Generate structured, AI-consumable metadata as `.metadata.yaml` files for design system components. Uses JSON Schema for validation via the `yaml-language-server` comment — no TypeScript build step required.
+Generate structured, AI-consumable component context as **two co-located YAML files**, validated via the `yaml-language-server` comment — no TypeScript build step required:
+
+- `<component>.spec.yaml` — **descriptive**: what the component *is* (API, variants, accessibility, usage examples, AI hints). A spec cannot be violated.
+- `<component>.governance.yaml` — **normative**: citable rules about what you *must or must not do* (anti-patterns, parent constraints). Only create it when the component has at least one rule.
+
+The split follows one test: **a spec describes, governance prescribes.**
 
 ## Why YAML over JSON?
 
@@ -24,12 +29,13 @@ Generate structured, AI-consumable metadata as `.metadata.yaml` files for design
 
 ## Quick Start
 
-1. Copy the template below into `[component-name].metadata.yaml`
+1. Copy the spec template below into `[component-name].spec.yaml`
 2. The `yaml-language-server` comment activates IDE validation automatically
 3. Fill in component data
+4. If the component has citable rules, also create `[component-name].governance.yaml` from the governance template
 
 ```yaml
-# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json
+# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
 component:
   name: ComponentName
   category: atoms
@@ -46,12 +52,10 @@ usage:
   requiredProps: []
   optionalProps: []
   commonPatterns: []
-  antiPatterns: []
 composition:
   slots: {}
   nestedComponents: []
   commonPartners: []
-  parentConstraints: []
   dependencies: []
 behavior:
   states: []
@@ -69,6 +73,29 @@ aiHints:
   keywords: []
   context: ""
 ```
+
+Governance template (only when the component has rules):
+
+```yaml
+# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-governance.schema.json
+component:
+  name: ComponentName
+  scope: XXX                    # scope code from the governance registry; prefixes every rule id
+rules:
+  - id: XXX-1
+    kind: anti-pattern          # a usage to avoid
+    scenario: What NOT to do.
+    reason: Why it's wrong.
+    alternative: What to do instead.
+    # severity: warning         # optional — defaults: anti-pattern → info, parent-constraint → warning
+  - id: XXX-2
+    kind: parent-constraint     # variants forbidden in a named context
+    context: named-parent-context
+    forbidden:
+      - variant: danger
+```
+
+Rule ids are authored and stable — never renumber, and never reuse a retired id. To repeal a rule, add `status: repealed` and leave it in place.
 
 ## Core Workflow
 
@@ -89,8 +116,8 @@ If a Figma file or component URL is provided, extract and populate the `componen
 
 If no Figma source is known, omit the `figma` block entirely — do not include it with empty strings.
 
-### 3. Generate Metadata
-Create a `.metadata.yaml` file. The `yaml-language-server` comment on line 1 enables:
+### 3. Generate the spec (and governance file, if rules exist)
+Create the `.spec.yaml` file — and a `.governance.yaml` beside it when the component has citable rules. The `yaml-language-server` comment on line 1 enables:
 - **Autocomplete** — Press Ctrl+Space in your IDE for property suggestions
 - **Validation** — Red squiggles for invalid values
 - **Hover docs** — Schema descriptions appear on hover
@@ -115,48 +142,56 @@ commonPatterns:
       />
 ```
 
-### 5. Validate Metadata
+### 5. Validate
 - IDE validates automatically via the `yaml-language-server` comment
-- Schema is also mapped in `.vscode/settings.json` as a fallback
+- Schemas are also mapped in `.vscode/settings.json` as a fallback
 - CLI validation (requires `js-yaml` + `ajv`):
   ```bash
-  npx js-yaml path/to/file.metadata.yaml | npx ajv validate \
-    -s .agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json \
+  npx js-yaml path/to/file.spec.yaml | npx ajv validate \
+    -s .agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json \
     -d /dev/stdin
   ```
 
 ## Folder Structure (Required)
 
-Co-locate the metadata file alongside the component code:
+Co-locate both files alongside the component code:
 
 ```text
 packages/design-system/src/components/[component-name]/
-├── index.js                         (exports the component)
-├── [component-name].jsx             (the component code)
-└── [component-name].metadata.yaml  (the AI metadata)
+├── index.js                            (exports the component)
+├── [component-name].jsx                (the component code)
+├── [component-name].spec.yaml          (descriptive spec)
+└── [component-name].governance.yaml    (normative rules — only if any exist)
 ```
 
 ## Schema Reference
 
-The JSON Schema is located at:
+The JSON Schemas are located at:
 ```
-.agent/skills/ai-component-metadata-yaml/schemas/component-metadata.schema.json
+.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
+.agent/skills/ai-component-metadata-yaml/schemas/component-governance.schema.json
 ```
 
-### Required sections
+### Required spec sections
 | Section | Purpose |
 |---|---|
 | `component` | Name, category (atoms/molecules/organisms), type, description |
-| `usage` | Use cases, patterns, anti-patterns |
+| `usage` | Use cases, patterns |
 | `aiHints` | Priority, keywords, natural language context |
 
-### Optional sections
+### Optional spec sections
 | Section | Purpose |
 |---|---|
 | `composition` | Slots, nested components, dependencies |
 | `behavior` | States, interactions, responsive rules |
 | `accessibility` | ARIA roles, keyboard support, WCAG level |
 | `variants` | Variant dimensions and their options |
+
+### Governance file sections
+| Section | Purpose |
+|---|---|
+| `component` | Name + scope code (prefixes every rule id) |
+| `rules` | Citable rules — `kind: anti-pattern` or `kind: parent-constraint` |
 
 ## Component Categories
 
@@ -175,12 +210,13 @@ Simple strings like prop names and short labels do not need quotes.
 1. **Keep examples real** — Use actual, runnable JSX in `commonPatterns`
 2. **Use block scalars for multi-line JSX** — `|` for literal, `>` for folded
 3. **Focus on patterns** — Document common usage patterns
-4. **Include anti-patterns** — Help AI avoid mistakes
+4. **Encode anti-patterns as governance rules** — Help AI avoid mistakes, with stable citations
 5. **Be consistent** — All components should use the same structure
+6. **Keep the split clean** — nothing normative in the spec, nothing descriptive in the governance file
 
 ## Success Metrics
 
-Your metadata is effective when:
+Your spec + governance files are effective when:
 - AI uses existing components instead of recreating
 - Correct variants are selected based on context
 - Accessibility is maintained in generated code

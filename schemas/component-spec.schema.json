@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "component-metadata.schema.json",
-  "title": "AI Component Metadata",
-  "description": "Schema for AI-consumable design system component metadata. Enables intelligent UI generation and component selection.",
+  "$id": "component-spec.schema.json",
+  "title": "AI Component Spec",
+  "description": "Schema for AI-consumable design system component specs — descriptive only (API, variants, accessibility, usage examples). Normative governance rules live in the sibling component-governance.schema.json.",
   "type": "object",
   "required": ["component", "usage", "aiHints"],
   "additionalProperties": false,
@@ -103,36 +103,6 @@
               }
             }
           }
-        },
-        "antiPatterns": {
-          "type": "array",
-          "description": "Known misuses to avoid. Each is a citable component-tier law.",
-          "items": {
-            "type": "object",
-            "required": ["id", "scenario", "reason", "alternative"],
-            "additionalProperties": false,
-            "properties": {
-              "id": { "$ref": "#/definitions/lawId" },
-              "scenario": {
-                "type": "string",
-                "description": "What NOT to do."
-              },
-              "reason": {
-                "type": "string",
-                "description": "Why it's wrong."
-              },
-              "alternative": {
-                "type": "string",
-                "description": "What to do instead."
-              },
-              "severity": { "$ref": "#/definitions/severity" },
-              "status": {
-                "type": "string",
-                "enum": ["repealed"],
-                "description": "Mark a law repealed: it stays in the authored YAML (its citation is retired, never reused) but is dropped from the generated governance index."
-              }
-            }
-          }
         }
       }
     },
@@ -155,57 +125,6 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Components frequently used alongside this one."
-        },
-        "parentConstraints": {
-          "type": "array",
-          "description": "Context-specific composition laws — a component+variant restricted within a named parent context. Each is a citable component-tier law.",
-          "items": {
-            "type": "object",
-            "required": ["id", "context"],
-            "additionalProperties": false,
-            "properties": {
-              "id": { "$ref": "#/definitions/lawId" },
-              "context": {
-                "type": "string",
-                "description": "The parent context this constraint applies in (e.g. 'form-email-collection')."
-              },
-              "description": {
-                "type": "string",
-                "description": "What this context is."
-              },
-              "severity": { "$ref": "#/definitions/severity" },
-              "forbidden": {
-                "type": "array",
-                "description": "Variants that must not be used in this context.",
-                "items": {
-                  "type": "object",
-                  "required": ["variant"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "variant": { "type": "string" },
-                    "reason": { "type": "string" }
-                  }
-                }
-              },
-              "recommended": {
-                "type": "array",
-                "description": "Variants to prefer instead.",
-                "items": {
-                  "type": "object",
-                  "required": ["variant"],
-                  "additionalProperties": false,
-                  "properties": {
-                    "variant": { "type": "string" }
-                  }
-                }
-              },
-              "status": {
-                "type": "string",
-                "enum": ["repealed"],
-                "description": "Mark a law repealed: it stays in the authored YAML (its citation is retired, never reused) but is dropped from the generated governance index."
-              }
-            }
-          }
         },
         "dependencies": {
           "type": "array",
@@ -294,18 +213,6 @@
           "description": "Natural language guidance for when to use this component."
         }
       }
-    }
-  },
-  "definitions": {
-    "lawId": {
-      "type": "string",
-      "pattern": "^[A-Z]{2,6}-[0-9]+$",
-      "description": "Authored, stable component-tier law citation, prefixed with the component's scope code (e.g. 'BTN-2'). Never reused once retired."
-    },
-    "severity": {
-      "type": "string",
-      "enum": ["error", "warning", "info"],
-      "description": "How hard the law pushes back. Defaults: parentConstraints → warning, antiPatterns → info. Set to override."
     }
   }
 }
