@@ -12,7 +12,7 @@ This skill is **spec-only**. It follows one test — **a spec describes,
 governance prescribes** — and owns only the descriptive half. Normative rules
 ("must / must not": component anti-patterns, parent constraints, and every
 composition/journey rule) are authored by the sibling
-[governance-authoring](https://github.com/robindicapua/governance-authoring)
+[governance-kit](https://github.com/robindicapua/governance-kit)
 skill, driven by the project's `governance-encode` write-path skill. After a
 spec is written, this skill offers to encode the component's governance rules
 now or defer them.
@@ -20,7 +20,7 @@ now or defer them.
 **Based on** [ai-component-metadata](https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata)
 by Cristian Morales. Converted to YAML for ~25% token reduction on deeply
 nested component data; v2 split spec from governance into two files; **v3
-extracted governance entirely into the governance-authoring skill**, leaving
+extracted governance entirely into the governance-kit**, leaving
 this skill spec-only.
 
 ---
@@ -39,7 +39,7 @@ instructs it to produce a `.spec.yaml` for the component. It tells AI agents:
 **What it deliberately does not do:** encode rules. "What to avoid" —
 anti-patterns, forbidden variants, one-primary-CTA-per-step, and any other
 normative constraint — is not a spec's job. Those are citable governance rules
-authored by the [governance-authoring](https://github.com/robindicapua/governance-authoring)
+authored by the [governance-kit](https://github.com/robindicapua/governance-kit)
 skill. For multi-step flows and composition constraints that span multiple
 components (e.g. "a checkout flow may only have one primary CTA visible at a
 time"), that skill is the one to use — its content model is rules-first across
@@ -108,7 +108,7 @@ Add the schema mapping to `.vscode/settings.json` so the `yaml-language-server` 
 }
 ```
 
-The component-governance schema is mapped by the governance-authoring skill,
+The component-governance schema is mapped by the governance-kit,
 not here.
 
 ---
@@ -199,8 +199,8 @@ The descriptive spec. Required sections: `component`, `usage`, `aiHints`.
 **Atomic Design categories:** `atoms`, `molecules`, `organisms`
 
 > Looking for the component-governance schema? It moved to the
-> governance-authoring skill:
-> `.agent/skills/governance-authoring/schemas/component-governance.schema.json`.
+> governance-kit:
+> `.agent/skills/governance-kit/authoring/schemas/component-governance.schema.json`.
 
 #### Figma fields
 
