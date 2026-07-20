@@ -1,28 +1,49 @@
-# AI Component Spec + Governance (YAML) — Claude Code Skill
+# Component Spec (YAML) — Claude Code Skill
 
-A [Claude Code](https://claude.ai/code) skill that generates structured, AI-readable context for design system components as **two co-located YAML files**, validated against JSON Schemas:
+A [Claude Code](https://claude.ai/code) skill that generates structured,
+AI-readable **descriptive** context for design system components as a single
+co-located YAML file, validated against a JSON Schema:
 
-- `<component>.spec.yaml` — **descriptive**: what the component *is* (API, variants, accessibility, usage examples, AI hints)
-- `<component>.governance.yaml` — **normative**: citable rules about what you *must or must not do* (anti-patterns, parent constraints); only present when the component has rules
+- `<component>.spec.yaml` — **descriptive**: what the component *is* (API,
+  variants, accessibility, usage examples, AI hints). A spec cannot be
+  violated.
 
-The split follows one test: **a spec describes, governance prescribes.**
+This skill is **spec-only**. It follows one test — **a spec describes,
+governance prescribes** — and owns only the descriptive half. Normative rules
+("must / must not": component anti-patterns, parent constraints, and every
+composition/journey rule) are authored by the sibling
+[governance-authoring](https://github.com/robindicapua/governance-authoring)
+skill, driven by the project's `governance-encode` write-path skill. After a
+spec is written, this skill offers to encode the component's governance rules
+now or defer them.
 
-**Based on** [ai-component-metadata](https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata) by Cristian Morales. Converted to YAML for ~25% token reduction on deeply nested component data; v2 split spec from governance.
+**Based on** [ai-component-metadata](https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata)
+by Cristian Morales. Converted to YAML for ~25% token reduction on deeply
+nested component data; v2 split spec from governance into two files; **v3
+extracted governance entirely into the governance-authoring skill**, leaving
+this skill spec-only.
 
 ---
 
 ## What it does
 
-When you ask Claude to generate or update component context, this skill instructs it to produce a `.spec.yaml` (and, when rules exist, a `.governance.yaml`) for each component. Together they tell AI agents:
+When you ask Claude to generate or update component context, this skill
+instructs it to produce a `.spec.yaml` for the component. It tells AI agents:
 
 - **When** to reach for this component (use cases, keywords, priority)
 - **How** to use it correctly (required/optional props, composition patterns)
-- **What to avoid** (governance rules with stable citations, reasons, and alternatives)
 - **How it behaves** (states, interactions, responsive rules)
 - **Accessibility requirements** (ARIA role, keyboard support, WCAG level)
 - **Available variants** and what each one is for
 
-For multi-step UI flows and composition constraints that span multiple components (e.g. "a checkout flow may only have one primary CTA visible at a time"), see the sibling [ai-pattern-metadata-yaml](https://github.com/robindicapua/ai-pattern-metadata-yaml) skill instead — that content model is rules-first across whole compositions, and doesn't fit this schema.
+**What it deliberately does not do:** encode rules. "What to avoid" —
+anti-patterns, forbidden variants, one-primary-CTA-per-step, and any other
+normative constraint — is not a spec's job. Those are citable governance rules
+authored by the [governance-authoring](https://github.com/robindicapua/governance-authoring)
+skill. For multi-step flows and composition constraints that span multiple
+components (e.g. "a checkout flow may only have one primary CTA visible at a
+time"), that skill is the one to use — its content model is rules-first across
+whole compositions.
 
 ---
 
@@ -36,7 +57,9 @@ For multi-step UI flows and composition constraints that span multiple component
 | Human readability | Moderate | High |
 | Machine readability | Universal | Universal |
 
-The savings compound on deeply nested component data and are meaningful at scale when AI agents load metadata for a full component library in a single context window.
+The savings compound on deeply nested component data and are meaningful at
+scale when AI agents load metadata for a full component library in a single
+context window.
 
 ---
 
@@ -55,7 +78,7 @@ The savings compound on deeply nested component data and are meaningful at scale
 Place this skill folder anywhere in your repo. The conventional location is:
 
 ```
-.agent/skills/ai-component-metadata-yaml/
+.agent/skills/component-spec/
 ```
 
 If you use a different path, update the schema references described in the [Customization](#customization) section below.
@@ -78,15 +101,15 @@ Add the schema mapping to `.vscode/settings.json` so the `yaml-language-server` 
 ```json
 {
   "yaml.schemas": {
-    ".agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json": [
+    ".agent/skills/component-spec/schemas/component-spec.schema.json": [
       "packages/ui/src/components/**/*.spec.yaml"
-    ],
-    ".agent/skills/ai-component-metadata-yaml/schemas/component-governance.schema.json": [
-      "packages/ui/src/components/**/*.governance.yaml"
     ]
   }
 }
 ```
+
+The component-governance schema is mapped by the governance-authoring skill,
+not here.
 
 ---
 
@@ -104,12 +127,14 @@ Or for a whole batch:
 Generate spec files for all components in packages/ui/src/components/.
 ```
 
-Claude will co-locate a `.spec.yaml` file next to each component source file (plus a `.governance.yaml` when the component has rules) and validate them against the schemas.
+Claude will co-locate a `.spec.yaml` file next to each component source file,
+validate it against the schema, and then ask whether to encode any governance
+rules now (via governance-encode) or later.
 
 ### Example output
 
 ```yaml
-# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
+# yaml-language-server: $schema=../../../../../.agent/skills/component-spec/schemas/component-spec.schema.json
 component:
   name: Button
   category: atoms
@@ -150,9 +175,9 @@ aiHints:
 
 ---
 
-## Schemas
+## Schema
 
-Two schemas ship with this skill.
+One schema ships with this skill.
 
 ### `component-spec.schema.json`
 
@@ -169,20 +194,13 @@ The descriptive spec. Required sections: `component`, `usage`, `aiHints`.
 | `accessibility` | No | ARIA role, keyboard support, screen reader, focus management, WCAG level |
 | `variants` | No | Variant dimensions and their options |
 
-### `component-governance.schema.json`
-
-The normative rules. Required sections: `component` (name + scope code), `rules`.
-
-| Rule kind | Fields | Purpose |
-|---|---|---|
-| `anti-pattern` | `scenario`, `reason`, `alternative` | A usage to avoid, with a stable citation id |
-| `parent-constraint` | `context`, `forbidden`, `recommended` | Variants restricted within a named parent context |
-
-Every rule has an authored, stable `id` prefixed with the component's scope code (e.g. `BTN-2`), an optional `severity` (`error`/`warning`/`info`), and an optional `status: repealed` to retire it without reusing the citation.
-
 **Functional types:** `interactive`, `display`, `container`, `input`, `navigation`
 
 **Atomic Design categories:** `atoms`, `molecules`, `organisms`
+
+> Looking for the component-governance schema? It moved to the
+> governance-authoring skill:
+> `.agent/skills/governance-authoring/schemas/component-governance.schema.json`.
 
 #### Figma fields
 
@@ -209,50 +227,34 @@ This skill is built for a specific project structure and Figma setup, but it is 
 
 ### Adapt to your folder structure
 
-The skill's `SKILL.md` contains a "Folder Structure" section that shows where metadata files should live relative to component source files. Update that section to match your project:
+The skill's `SKILL.md` contains a "Folder Structure" section that shows where spec files should live relative to component source files. Update that section to match your project:
 
 **Default (this repo):**
 ```
 packages/ui/src/components/[component-name]/
 ├── [component-name].tsx
-├── [component-name].spec.yaml
-└── [component-name].governance.yaml   (only if the component has rules)
+└── [component-name].spec.yaml
 ```
 
 **Alternative: flat components folder**
 ```
 src/components/
 ├── Button.tsx
-├── Button.spec.yaml
-└── Button.governance.yaml
-```
-
-**Alternative: monorepo with multiple packages**
-```
-packages/[package-name]/src/[component-name]/
-├── index.ts
-├── [component-name].tsx
-├── [component-name].spec.yaml
-└── [component-name].governance.yaml
+└── Button.spec.yaml
 ```
 
 Edit `SKILL.md` → "Folder Structure (Required)" section to reflect your actual layout, and update the `component.path` description in `component-spec.schema.json` if needed.
 
 ### Update the schema reference path
 
-Every `.spec.yaml` / `.governance.yaml` file starts with a `yaml-language-server` comment that points to its schema. The path is relative to the file's location. If the skill lives somewhere other than `.agent/skills/ai-component-metadata-yaml/`, count the directory levels and adjust accordingly.
+Every `.spec.yaml` file starts with a `yaml-language-server` comment that points to its schema. The path is relative to the file's location. If the skill lives somewhere other than `.agent/skills/component-spec/`, count the directory levels and adjust accordingly.
 
-**Skill at `.agent/skills/ai-component-metadata-yaml/` — component 4 levels deep:**
+**Skill at `.agent/skills/component-spec/` — component 5 levels deep:**
 ```yaml
-# yaml-language-server: $schema=../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
+# yaml-language-server: $schema=../../../../../.agent/skills/component-spec/schemas/component-spec.schema.json
 ```
 
-**Skill at `tools/skills/metadata/` — component 2 levels deep:**
-```yaml
-# yaml-language-server: $schema=../../tools/skills/metadata/schemas/component-spec.schema.json
-```
-
-Update the Quick Start templates in `SKILL.md` so Claude generates the correct paths automatically.
+Update the Quick Start template in `SKILL.md` so Claude generates the correct paths automatically.
 
 ### Adapt the component categories
 
@@ -268,10 +270,6 @@ The schema enforces `atoms`, `molecules`, `organisms` (Atomic Design). If your d
 
 Then update `SKILL.md` → "Component Categories" section to match.
 
-### Tune how hard rules push back
-
-Every governance rule carries an optional `severity` (`error` | `warning` | `info`); defaults are `info` for `anti-pattern` and `warning` for `parent-constraint`. If you run automated governance checks in CI, treat `error` as blocking and the rest as advisory — no schema change needed.
-
 ---
 
 ## CLI validation
@@ -281,7 +279,7 @@ Validate a file without an IDE:
 ```bash
 # Requires js-yaml and ajv to be installed
 npx js-yaml path/to/button.spec.yaml | npx ajv validate \
-  -s .agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json \
+  -s .agent/skills/component-spec/schemas/component-spec.schema.json \
   -d /dev/stdin
 ```
 

@@ -1,24 +1,32 @@
 ---
-name: ai-component-metadata-yaml
-version: 2.0.0
+name: component-spec
+version: 3.0.0
 author: Robin Di Capua
-based_on: "ai-component-metadata-json by Robin Di Capua, itself adapted from ai-component-metadata by Cristian Morales — https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata"
-changes: "v2.0.0: split the single .metadata.yaml into two files — a descriptive .spec.yaml (API, variants, a11y, examples) and a normative .governance.yaml (citable rules: anti-patterns, parent constraints). Previously: converted from JSON to YAML for ~25% token reduction."
+based_on: "ai-component-metadata-yaml by Robin Di Capua, itself adapted from ai-component-metadata by Cristian Morales — https://github.com/cris-achiardi/claude-skills/tree/main/skills/ai-component-metadata"
+changes: "v3.0.0: extracted the governance half. This skill now generates ONLY the descriptive <component>.spec.yaml. Component-tier governance rules (anti-patterns, parent constraints) moved to the governance-authoring skill, which owns every governance file format across tiers. v2.0.0: split the single .metadata.yaml into .spec.yaml + .governance.yaml. v1: converted from JSON to YAML for ~25% token reduction."
 license: MIT
-description: Generate AI-ready component context as two YAML files with JSON Schema validation — a descriptive spec (<component>.spec.yaml) and, when the component has citable rules, a governance file (<component>.governance.yaml). A spec describes, governance prescribes. Lower token cost than JSON equivalents, human-readable, and IDE-validated via the yaml-language-server comment.
+description: Generate an AI-ready, descriptive component spec as a single YAML file (<component>.spec.yaml) with JSON Schema validation — API, variants, accessibility, usage examples, AI hints. A spec describes; it cannot be violated. Normative rules ("must / must not") are NOT this skill's job — those are authored by the governance-authoring skill. After writing a spec, offer to encode the component's governance rules now or defer them. Lower token cost than JSON, human-readable, IDE-validated via the yaml-language-server comment.
 ---
 
-**Version:** 2.0.0  
-**Last Updated:** 2026-07-15
+**Version:** 3.0.0  
+**Last Updated:** 2026-07-20
 
-# AI Component Spec + Governance Generator (YAML)
+# AI Component Spec Generator (YAML)
 
-Generate structured, AI-consumable component context as **two co-located YAML files**, validated via the `yaml-language-server` comment — no TypeScript build step required:
+Generate a structured, AI-consumable **descriptive** spec for a component as a
+single YAML file, validated via the `yaml-language-server` comment — no
+TypeScript build step required:
 
-- `<component>.spec.yaml` — **descriptive**: what the component *is* (API, variants, accessibility, usage examples, AI hints). A spec cannot be violated.
-- `<component>.governance.yaml` — **normative**: citable rules about what you *must or must not do* (anti-patterns, parent constraints). Only create it when the component has at least one rule.
+- `<component>.spec.yaml` — **descriptive**: what the component *is* (API,
+  variants, accessibility, usage examples, AI hints). A spec cannot be
+  violated.
 
-The split follows one test: **a spec describes, governance prescribes.**
+This skill is **spec-only**. It sits on one side of the design system's
+foundational line — **a spec describes, governance prescribes.** The normative
+side (citable rules about what you *must or must not do* — component
+anti-patterns, parent constraints, and every composition/journey rule) is
+owned by the **governance-authoring** skill. See
+[Hand off governance](#6-hand-off-governance) below for the flow.
 
 ## Why YAML over JSON?
 
@@ -32,10 +40,10 @@ The split follows one test: **a spec describes, governance prescribes.**
 1. Copy the spec template below into `[component-name].spec.yaml`
 2. The `yaml-language-server` comment activates IDE validation automatically
 3. Fill in component data
-4. If the component has citable rules, also create `[component-name].governance.yaml` from the governance template
+4. When the spec is done, run the [governance hand-off](#6-hand-off-governance)
 
 ```yaml
-# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
+# yaml-language-server: $schema=../../../../../.agent/skills/component-spec/schemas/component-spec.schema.json
 component:
   name: ComponentName
   category: atoms
@@ -74,28 +82,10 @@ aiHints:
   context: ""
 ```
 
-Governance template (only when the component has rules):
-
-```yaml
-# yaml-language-server: $schema=../../../../../.agent/skills/ai-component-metadata-yaml/schemas/component-governance.schema.json
-component:
-  name: ComponentName
-  scope: XXX                    # scope code from the governance registry; prefixes every rule id
-rules:
-  - id: XXX-1
-    kind: anti-pattern          # a usage to avoid
-    scenario: What NOT to do.
-    reason: Why it's wrong.
-    alternative: What to do instead.
-    # severity: warning         # optional — defaults: anti-pattern → info, parent-constraint → warning
-  - id: XXX-2
-    kind: parent-constraint     # variants forbidden in a named context
-    context: named-parent-context
-    forbidden:
-      - variant: danger
-```
-
-Rule ids are authored and stable — never renumber, and never reuse a retired id. To repeal a rule, add `status: repealed` and leave it in place.
+> **Nothing normative in the spec.** Do not add "must" / "must not" rules,
+> anti-patterns, or forbidden variants here — they belong in the component's
+> `.governance.yaml`, authored by the governance-authoring skill. Keeping the
+> spec purely descriptive is what makes it safe for any agent to trust.
 
 ## Core Workflow
 
@@ -116,8 +106,8 @@ If a Figma file or component URL is provided, extract and populate the `componen
 
 If no Figma source is known, omit the `figma` block entirely — do not include it with empty strings.
 
-### 3. Generate the spec (and governance file, if rules exist)
-Create the `.spec.yaml` file — and a `.governance.yaml` beside it when the component has citable rules. The `yaml-language-server` comment on line 1 enables:
+### 3. Generate the spec
+Create the `.spec.yaml` file. The `yaml-language-server` comment on line 1 enables:
 - **Autocomplete** — Press Ctrl+Space in your IDE for property suggestions
 - **Validation** — Red squiggles for invalid values
 - **Hover docs** — Schema descriptions appear on hover
@@ -148,29 +138,56 @@ commonPatterns:
 - CLI validation (requires `js-yaml` + `ajv`):
   ```bash
   npx js-yaml path/to/file.spec.yaml | npx ajv validate \
-    -s .agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json \
+    -s .agent/skills/component-spec/schemas/component-spec.schema.json \
     -d /dev/stdin
   ```
 
+### 6. Hand off governance
+
+A spec is descriptive only — it can't express "this component must not use the
+`danger` variant on a confirmation screen." Those rules live in a separate
+`<component>.governance.yaml`, owned by the **governance-authoring** skill.
+
+Once the spec is written, **ask the user whether to encode the component's
+governance rules now or later:**
+
+- **"Encode them now"** → hand off to the **governance-encode** skill (the
+  write-path process: it gate-checks the rule, classifies the tier, assigns a
+  stable citation id, and — for a component rule — authors it via the
+  **governance-authoring** skill's component-governance format, then runs
+  `npm run sync:governance`).
+- **"Later"** → stop here. The spec stands on its own; a component with no
+  rules simply has no governance file. Governance can always be added later
+  via governance-encode when a real rule emerges (which is the common case —
+  most rules are discovered after a misuse, not at authoring time).
+
+Do not author governance YAML from this skill. If the user wants rules encoded,
+route through governance-encode / governance-authoring so tier classification
+and citation assignment stay in one place.
+
 ## Folder Structure (Required)
 
-Co-locate both files alongside the component code:
+Co-locate the spec alongside the component code. A `.governance.yaml` appears
+beside it only when the component has rules — authored by the
+governance-authoring skill, not this one:
 
 ```text
 packages/design-system/src/components/[component-name]/
 ├── index.js                            (exports the component)
 ├── [component-name].jsx                (the component code)
-├── [component-name].spec.yaml          (descriptive spec)
-└── [component-name].governance.yaml    (normative rules — only if any exist)
+├── [component-name].spec.yaml          (descriptive spec — THIS skill)
+└── [component-name].governance.yaml    (normative rules — governance-authoring skill, only if any exist)
 ```
 
 ## Schema Reference
 
-The JSON Schemas are located at:
+The JSON Schema is located at:
 ```
-.agent/skills/ai-component-metadata-yaml/schemas/component-spec.schema.json
-.agent/skills/ai-component-metadata-yaml/schemas/component-governance.schema.json
+.agent/skills/component-spec/schemas/component-spec.schema.json
 ```
+
+The component-governance schema now lives with the governance-authoring skill
+(`.agent/skills/governance-authoring/schemas/component-governance.schema.json`).
 
 ### Required spec sections
 | Section | Purpose |
@@ -186,12 +203,6 @@ The JSON Schemas are located at:
 | `behavior` | States, interactions, responsive rules |
 | `accessibility` | ARIA roles, keyboard support, WCAG level |
 | `variants` | Variant dimensions and their options |
-
-### Governance file sections
-| Section | Purpose |
-|---|---|
-| `component` | Name + scope code (prefixes every rule id) |
-| `rules` | Citable rules — `kind: anti-pattern` or `kind: parent-constraint` |
 
 ## Component Categories
 
@@ -210,13 +221,12 @@ Simple strings like prop names and short labels do not need quotes.
 1. **Keep examples real** — Use actual, runnable JSX in `commonPatterns`
 2. **Use block scalars for multi-line JSX** — `|` for literal, `>` for folded
 3. **Focus on patterns** — Document common usage patterns
-4. **Encode anti-patterns as governance rules** — Help AI avoid mistakes, with stable citations
+4. **Keep the spec purely descriptive** — nothing normative; route rules to governance-authoring via governance-encode
 5. **Be consistent** — All components should use the same structure
-6. **Keep the split clean** — nothing normative in the spec, nothing descriptive in the governance file
 
 ## Success Metrics
 
-Your spec + governance files are effective when:
+Your spec files are effective when:
 - AI uses existing components instead of recreating
 - Correct variants are selected based on context
 - Accessibility is maintained in generated code
